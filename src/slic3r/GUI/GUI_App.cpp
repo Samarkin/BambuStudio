@@ -2922,13 +2922,19 @@ bool GUI_App::OnInit()
     RegisterMacPowerCallBack();
 #endif
 
+    // wxWidgets skips OnExit when OnInit fails, so stop the bind thread here before wxTheApp is reset
     try {
-        return on_init_inner();
+        if (on_init_inner())
+            return true;
     } catch (const std::exception& e) {
         BOOST_LOG_TRIVIAL(fatal) << "Got Fatal error: " << e.what();
+        m_load_last_machine.Stop();
         generic_exception_handle();
         return false;
     }
+
+    m_load_last_machine.Stop();
+    return false;
 }
 
 int GUI_App::OnExit()
