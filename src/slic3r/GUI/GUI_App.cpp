@@ -2922,19 +2922,26 @@ bool GUI_App::OnInit()
     RegisterMacPowerCallBack();
 #endif
 
-    // wxWidgets skips OnExit when OnInit fails, so stop the bind thread here before wxTheApp is reset
+    // wxWidgets skips OnExit when OnInit fails, so stop the LAN reconnect threads here before wxTheApp is reset
     try {
         if (on_init_inner())
             return true;
     } catch (const std::exception& e) {
         BOOST_LOG_TRIVIAL(fatal) << "Got Fatal error: " << e.what();
-        m_load_last_machine.Stop();
+        stop_lan_reconnect_threads();
         generic_exception_handle();
         return false;
     }
 
-    m_load_last_machine.Stop();
+    stop_lan_reconnect_threads();
     return false;
+}
+
+void GUI_App::stop_lan_reconnect_threads()
+{
+    m_load_last_machine.Stop();
+    if (m_device_manager)
+        m_device_manager->stop_restore_local_machines();
 }
 
 int GUI_App::OnExit()
@@ -2943,8 +2950,8 @@ int GUI_App::OnExit()
     UnRegisterMacPowerCallBack();
 #endif
 
-    // The bind thread uses m_agent and wxTheApp, both of which are torn down below
-    m_load_last_machine.Stop();
+    // The LAN reconnect threads use m_agent and wxTheApp, both of which are torn down below
+    stop_lan_reconnect_threads();
 
     Slic3r::HelioQuery::shutdown_background_requests();
 

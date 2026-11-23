@@ -900,6 +900,7 @@ public:
 private:
     int             updating_bambu_networking();
     bool            on_init_inner();
+    void            stop_lan_reconnect_threads();
     void            copy_network_if_available();
     bool            on_init_network(bool try_backup = false);
     void            init_networking_callbacks();

@@ -39,6 +39,8 @@ namespace Slic3r
 
     DeviceManager::~DeviceManager()
     {
+        stop_restore_local_machines();
+
         delete m_refresher;
 
         for (auto it = localMachineList.begin(); it != localMachineList.end(); it++)
@@ -404,10 +406,18 @@ namespace Slic3r
 
         if (local_access_infos.empty()) return;
 
+        if (m_restore_local_thread.joinable()) {
+            if (!m_restore_local_thread.try_join_for(boost::chrono::milliseconds(0))) {
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": thread is running";
+                return;
+            }
+        }
+
         NetworkAgent* agent = m_agent;
-        boost::thread([agent, local_access_infos] {
+        m_restore_local_stop = false;
+        m_restore_local_thread = boost::thread([this, agent, local_access_infos] {
             for (const auto& local_access_info : local_access_infos) {
-                if (GUI::wxGetApp().is_closing()) return;
+                if (m_restore_local_stop || GUI::wxGetApp().is_closing()) return;
 
                 // bind_detect is a hint, not a gate. It used to skip the device whenever the probe
                 // was not conclusive, so a sleeping printer or a transient network hiccup was
@@ -464,7 +474,19 @@ namespace Slic3r
                     }
                 });
             }
-        }).detach();
+        });
+    }
+
+    void DeviceManager::stop_restore_local_machines()
+    {
+        m_restore_local_stop = true;
+        try {
+            if (m_restore_local_thread.joinable()) {
+                m_restore_local_thread.join();
+            }
+        } catch (const std::exception& ex) {
+            BOOST_LOG_TRIVIAL(error) << "Restore local machines thread join failed: " << ex.what();
+        }
     }
 
     int DeviceManager::query_bind_status(std::string& msg)

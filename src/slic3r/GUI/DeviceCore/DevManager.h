@@ -1,6 +1,8 @@
 #pragma once
+#include <atomic>
 #include <functional>
 #include <mutex>
+#include <boost/thread.hpp>
 #include "libslic3r/CommonDefs.hpp"
 
 #include "slic3r/Utils/json_diff.hpp"
@@ -28,6 +30,9 @@ private:
     std::string local_selected_machine;                         /* dev_id */
     std::map<std::string, MachineObject*> localMachineList;     /* dev_id -> MachineObject*, localMachine SSDP   */
     std::map<std::string, MachineObject*> userMachineList;      /* dev_id -> MachineObject*  cloudMachine of User */
+
+    boost::thread     m_restore_local_thread;
+    std::atomic<bool> m_restore_local_stop{ false };
 
 public:
     DeviceManager(NetworkAgent* agent = nullptr);
@@ -88,6 +93,8 @@ public:
     /* create machine or update machine properties */
     void on_machine_alive(std::string json_str);
     void restore_local_machines_from_user_access_config();
+    // Blocks until the thread started by restore_local_machines_from_user_access_config exits
+    void stop_restore_local_machines();
     int query_bind_status(std::string& msg);
 
     // mutil-device
