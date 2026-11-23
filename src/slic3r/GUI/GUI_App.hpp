@@ -245,6 +245,7 @@ struct TryLoadLastMachine
     bool is_list_ok = false;
 
     void InnerLoad(NetworkAgent *agent, DeviceManager *dev);
+    void Stop();
 
     inline void TryLoadFromMqttCB(NetworkAgent *agent, DeviceManager *dev)
     {

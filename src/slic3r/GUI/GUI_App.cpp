@@ -2937,6 +2937,9 @@ int GUI_App::OnExit()
     UnRegisterMacPowerCallBack();
 #endif
 
+    // The bind thread uses m_agent and wxTheApp, both of which are torn down below
+    m_load_last_machine.Stop();
+
     Slic3r::HelioQuery::shutdown_background_requests();
 
     stop_sync_user_preset();
@@ -9328,12 +9331,17 @@ static void sLocalBindFunc(std::string str_ip,
 
 TryLoadLastMachine::~TryLoadLastMachine()
 {
+    Stop();
+}
+
+void TryLoadLastMachine::Stop()
+{
     try {
         if (local_bind_thread.joinable()) {
             local_bind_thread.join();
         }
     } catch (const std::exception& ex) {
-        BOOST_LOG_TRIVIAL(error) << "Local bind thread join failed in destructor: " << ex.what();
+        BOOST_LOG_TRIVIAL(error) << "Local bind thread join failed: " << ex.what();
     }
 }
 
