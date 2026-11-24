@@ -2218,15 +2218,18 @@ void InputIpAddressDialog::on_send_retry()
         this->check_ip_address_failed(result);
     });
 
+    // Called from the send job's worker thread, while update_test_msg resizes the dialog
     m_send_job->on_check_ip_address_success([this, ip, str_access_code]() {
-        wxString input_str = wxString::Format("%s|%s", ip, str_access_code);
-        auto     event     = wxCommandEvent(EVT_ENTER_IP_ADDRESS);
-        event.SetString(input_str);
-        event.SetEventObject(this);
-        wxPostEvent(this, event);
-        m_result = 0;
+        CallAfter([this, ip, str_access_code]() {
+            wxString input_str = wxString::Format("%s|%s", ip, str_access_code);
+            auto     event     = wxCommandEvent(EVT_ENTER_IP_ADDRESS);
+            event.SetString(input_str);
+            event.SetEventObject(this);
+            wxPostEvent(this, event);
+            m_result = 0;
 
-        update_test_msg(_L("IP and Access Code Verified! You may close the window"), true);
+            update_test_msg(_L("IP and Access Code Verified! You may close the window"), true);
+        });
     });
 
     m_send_job->start();
